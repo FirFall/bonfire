@@ -37,7 +37,7 @@ The schema creates itself on first server start.
 ### Notes
 
 - **Instance plan**: both services are on Render's **Free** plan ($0). The catch: free web services spin down after ~15 minutes with no traffic, which drops live chat connections. Bonfire handles this gracefully — the client auto-reconnects (brief gap, then it's back). If you ever want always-on chat, bump the web service to Starter ($7/mo) in its settings.
-- **Database**: Using external free Postgres from [Neon](https://neon.tech) (500 MB, never pauses, no credit card). Get the connection string from the Neon dashboard and paste it into Render's Environment variables as `DATABASE_URL`. The schema auto-creates on boot, so no migration step needed.
+- **Database**: Using external free Postgres from [Supabase](https://supabase.com) (500 MB free). Get the connection string from **Project Settings → Database → Connection string → URI** and paste it into Render's Environment variables as `DATABASE_URL`. The schema auto-creates on boot, so no migration step needed.
 - The schema auto-creates on boot, so there's no migration step.
 
 ## Architecture
