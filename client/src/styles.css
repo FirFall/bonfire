@@ -1,0 +1,316 @@
+/* Discord-flavored dark theme */
+:root {
+  --bg-guild: #1e1f22;
+  --bg-channel: #2b2d31;
+  --bg-chat: #313338;
+  --bg-member: #2b2d31;
+  --bg-input: #383a40;
+  --bg-hover: #35373c;
+  --bg-active: #404249;
+  --text-normal: #dbdee1;
+  --text-muted: #949ba4;
+  --text-header: #f2f3f5;
+  --blurple: #5865f2;
+  --green: #23a559;
+  --red: #da373c;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: "gg sans", "Noto Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background: var(--bg-chat);
+  color: var(--text-normal);
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  height: 100vh;
+}
+
+/* ---------- Buttons & inputs ---------- */
+button { font: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+input {
+  font: inherit;
+  background: #1e1f22;
+  border: 1px solid #1e1f22;
+  border-radius: 4px;
+  color: var(--text-normal);
+  padding: 10px;
+  outline: none;
+}
+input:focus { border-color: var(--blurple); }
+
+.btn-primary {
+  background: var(--blurple);
+  color: #fff;
+  border-radius: 4px;
+  padding: 10px;
+  font-weight: 500;
+  transition: background 0.15s;
+}
+.btn-primary:hover { background: #4752c4; }
+.btn-primary:disabled { opacity: 0.6; }
+
+/* ---------- Login ---------- */
+.login-page {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #404eed 0%, #2b2d31 100%);
+}
+.login-card {
+  background: var(--bg-chat);
+  padding: 32px;
+  border-radius: 8px;
+  width: 420px;
+  max-width: 92vw;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+.login-card h1 { color: var(--text-header); text-align: center; }
+.login-sub { color: var(--text-muted); text-align: center; margin-bottom: 12px; }
+.login-card label {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-top: 8px;
+}
+.login-error { color: var(--red); font-size: 14px; }
+.login-switch { color: var(--text-muted); font-size: 14px; margin-top: 8px; }
+.login-switch a { color: #00a8fc; cursor: pointer; }
+
+/* ---------- Guild sidebar ---------- */
+.guild-sidebar {
+  width: 72px;
+  background: var(--bg-guild);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+  gap: 8px;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+.guild-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--bg-chat);
+  color: var(--text-normal);
+  font-weight: 600;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-radius 0.15s, background 0.15s;
+}
+.guild-icon:hover, .guild-icon.active {
+  border-radius: 16px;
+  background: var(--blurple);
+  color: #fff;
+}
+.guild-icon.add { color: var(--green); font-size: 24px; }
+.guild-icon.add:hover { background: var(--green); color: #fff; }
+.guild-divider { width: 32px; height: 2px; background: var(--bg-chat); border-radius: 1px; }
+
+/* ---------- Channel sidebar ---------- */
+.channel-sidebar {
+  width: 240px;
+  background: var(--bg-channel);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+.guild-header {
+  padding: 14px 16px;
+  font-weight: 600;
+  color: var(--text-header);
+  border-bottom: 1px solid #1e1f22;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.invite-box {
+  margin: 10px 10px 0;
+  padding: 8px 10px;
+  background: var(--bg-guild);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.invite-box code { color: #00a8fc; user-select: all; }
+
+.channel-list { flex: 1; overflow-y: auto; padding: 12px 8px; }
+.channel-list-label {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0 8px 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.channel-add { color: var(--text-muted); font-size: 18px; }
+.channel-add:hover { color: var(--text-header); }
+.channel-empty { color: var(--text-muted); font-size: 13px; padding: 4px 8px; }
+.channel-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 8px;
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 15px;
+  text-align: left;
+}
+.channel-item:hover { background: var(--bg-hover); color: var(--text-normal); }
+.channel-item.active { background: var(--bg-active); color: var(--text-header); }
+.hash { color: var(--text-muted); font-weight: 400; }
+
+.user-panel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: #232428;
+}
+.user-panel-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-header);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.icon-btn { color: var(--text-muted); font-size: 18px; padding: 4px; }
+.icon-btn:hover { color: var(--text-header); }
+
+/* ---------- Avatars ---------- */
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.avatar.small { width: 32px; height: 32px; font-size: 13px; }
+
+/* ---------- Chat ---------- */
+.chat { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.chat-header {
+  padding: 14px 16px;
+  font-weight: 600;
+  color: var(--text-header);
+  border-bottom: 1px solid #26272b;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+}
+.message-list { flex: 1; overflow-y: auto; padding: 16px 0; }
+.chat-empty {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 16px;
+  color: var(--text-muted);
+}
+.chat-empty h2 { color: var(--text-header); margin-bottom: 6px; }
+
+.message { padding: 2px 16px 2px 16px; margin-top: 12px; }
+.message.grouped { margin-top: 0; padding-left: 72px; min-height: 22px; }
+.message:hover { background: rgba(0, 0, 0, 0.06); }
+.message:not(.grouped) .avatar { float: left; margin-right: 12px; }
+.message-meta { display: flex; align-items: baseline; gap: 8px; }
+.message-author { color: var(--text-header); font-weight: 600; }
+.message-time { color: var(--text-muted); font-size: 11px; }
+.message-content {
+  color: var(--text-normal);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.typing-indicator {
+  padding: 2px 16px;
+  font-size: 13px;
+  color: var(--text-normal);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 22px;
+}
+.typing-dots { display: inline-flex; gap: 3px; }
+.typing-dots i {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--text-muted);
+  animation: blink 1.2s infinite;
+}
+.typing-dots i:nth-child(2) { animation-delay: 0.2s; }
+.typing-dots i:nth-child(3) { animation-delay: 0.4s; }
+@keyframes blink { 0%, 80%, 100% { opacity: 0.2; } 40% { opacity: 1; } }
+
+.chat-input-row { padding: 0 16px 20px; }
+.chat-input {
+  width: 100%;
+  background: var(--bg-input);
+  border: none;
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: var(--text-normal);
+}
+
+/* ---------- Member list ---------- */
+.member-list {
+  width: 240px;
+  background: var(--bg-member);
+  padding: 16px 8px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.member-list-label {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0 8px 8px;
+}
+.member {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 8px;
+  border-radius: 4px;
+}
+.member:hover { background: var(--bg-hover); }
+.member.offline { opacity: 0.4; }
+.member-name { font-size: 15px; font-weight: 500; }
+.owner-tag {
+  background: var(--blurple);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-thumb { background: #1a1b1e; border-radius: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+@media (max-width: 900px) {
+  .member-list { display: none; }
+}

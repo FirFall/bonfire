@@ -1,0 +1,9 @@
+{
+  "name": "discord-clone",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Discord-style chat app for Render (see render.yaml)",
+  "engines": {
+    "node": ">=20"
+  }
+}
