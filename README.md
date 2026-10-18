@@ -30,14 +30,14 @@ The schema creates itself on first server start.
 1. The code is already pushed to GitHub at **https://github.com/FirFall/bonfire**
 2. In the [Render Dashboard](https://dashboard.render.com): **New → Blueprint**, connect GitHub and pick the `bonfire` repo.
 3. Render reads `render.yaml` and will create the web service (`bonfire`, free plan). It **won't** create a Postgres DB (we removed that section).
-4. After the service is created, go to its **Environment** tab and replace `REPLACE_WITH_WISPBITE_DATABASE_URL` with your actual Wispbyte PostgreSQL connection string.
+4. After the service is created, go to its **Environment** tab and replace `PASTE_YOUR_NEON_CONNECTION_STRING_HERE` with your Neon PostgreSQL connection string.
 5. Click **Manual Deploy → Deploy latest commit** to restart with the new DB.
 6. Once it shows "Live", open the service URL — Bonfire is up!
 
 ### Notes
 
 - **Instance plan**: both services are on Render's **Free** plan ($0). The catch: free web services spin down after ~15 minutes with no traffic, which drops live chat connections. Bonfire handles this gracefully — the client auto-reconnects (brief gap, then it's back). If you ever want always-on chat, bump the web service to Starter ($7/mo) in its settings.
-- **Database**: Using external Postgres from [Wispbyte](https://wispbyte.com/) (free). Get your connection string from their dashboard and paste it into Render's Environment variables as `DATABASE_URL`. The schema auto-creates on boot, so no migration step needed.
+- **Database**: Using external free Postgres from [Neon](https://neon.tech) (500 MB, never pauses, no credit card). Get the connection string from the Neon dashboard and paste it into Render's Environment variables as `DATABASE_URL`. The schema auto-creates on boot, so no migration step needed.
 - The schema auto-creates on boot, so there's no migration step.
 
 ## Architecture
