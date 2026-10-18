@@ -34,8 +34,8 @@ The schema creates itself on first server start.
 
 ### Notes
 
-- **Instance plan**: the web service is set to **Starter** ($7/mo) because persistent WebSocket connections need it — Render's free instances spin down after inactivity, which drops live connections. For testing you can switch to free in the dashboard (chat still works, just reconnects after idle).
-- The Postgres instance in `render.yaml` is `free`; Render's free Postgres has a 90-day expiry, so switch it to a paid plan for anything long-lived.
+- **Instance plan**: both services are on Render's **Free** plan ($0). The catch: free web services spin down after ~15 minutes with no traffic, which drops live chat connections. Bonfire handles this gracefully — the client auto-reconnects (brief gap, then it's back). If you ever want always-on chat, bump the web service to Starter ($7/mo) in its settings.
+- The Postgres instance in `render.yaml` is `free`; Render's free Postgres has a 90-day expiry, so export/upgrade if you want to keep it long-term.
 - The schema auto-creates on boot, so there's no migration step.
 
 ## Architecture
