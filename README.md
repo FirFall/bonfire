@@ -29,13 +29,15 @@ The schema creates itself on first server start.
 
 1. The code is already pushed to GitHub at **https://github.com/FirFall/bonfire**
 2. In the [Render Dashboard](https://dashboard.render.com): **New → Blueprint**, connect GitHub and pick the `bonfire` repo.
-3. Render reads `render.yaml`, provisions the web service (`bonfire`) + Postgres (`bonfire-db`), wires `DATABASE_URL`, and generates a `JWT_SECRET`. Click **Apply**.
-4. Once the deploy finishes, open the service URL — you're live.
+3. Render reads `render.yaml` and will create the web service (`bonfire`, free plan). It **won't** create a Postgres DB (we removed that section).
+4. After the service is created, go to its **Environment** tab and replace `REPLACE_WITH_WISPBITE_DATABASE_URL` with your actual Wispbyte PostgreSQL connection string.
+5. Click **Manual Deploy → Deploy latest commit** to restart with the new DB.
+6. Once it shows "Live", open the service URL — Bonfire is up!
 
 ### Notes
 
 - **Instance plan**: both services are on Render's **Free** plan ($0). The catch: free web services spin down after ~15 minutes with no traffic, which drops live chat connections. Bonfire handles this gracefully — the client auto-reconnects (brief gap, then it's back). If you ever want always-on chat, bump the web service to Starter ($7/mo) in its settings.
-- The Postgres instance in `render.yaml` is `free`; Render's free Postgres has a 90-day expiry, so export/upgrade if you want to keep it long-term.
+- **Database**: Using external Postgres from [Wispbyte](https://wispbyte.com/) (free). Get your connection string from their dashboard and paste it into Render's Environment variables as `DATABASE_URL`. The schema auto-creates on boot, so no migration step needed.
 - The schema auto-creates on boot, so there's no migration step.
 
 ## Architecture
@@ -57,7 +59,7 @@ client (React)  ──REST──▶  server (Express)  ──▶  Postgres
 
 | Var | Where | Purpose |
 |---|---|---|
-| `DATABASE_URL` | Render (auto from blueprint) | Postgres connection string |
+| `DATABASE_URL` | Render (set manually to Wispbyte) | Postgres connection string |
 | `JWT_SECRET` | Render (auto-generated) | Token signing key |
 | `PORT` | Render (injected) | HTTP port |
 | `WORKER_ID` | optional | Snowflake worker bits (default 1) |
