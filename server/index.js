@@ -40,7 +40,7 @@ attach(server);
 initSchema()
   .then(() => {
     server.listen(PORT, () => {
-      console.log(`Discord clone server listening on :${PORT}`);
+      console.log(`Bonfire server listening on :${PORT}`);
     });
   })
   .catch((err) => {

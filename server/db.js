@@ -3,7 +3,7 @@ const path = require("path");
 const { Pool } = require("pg");
 
 // DATABASE_URL is provided by Render (managed Postgres).
-// For local dev: postgresql://user:password@localhost:5432/discord_clone
+// For local dev: postgresql://user:password@localhost:5432/bonfire
 const pool = new Pool(
   process.env.DATABASE_URL
     ? { connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } }
@@ -12,7 +12,7 @@ const pool = new Pool(
         port: process.env.PGPORT || 5432,
         user: process.env.PGUSER || "postgres",
         password: process.env.PGPASSWORD || "postgres",
-        database: process.env.PGDATABASE || "discord_clone",
+        database: process.env.PGDATABASE || "bonfire",
       }
 );
 

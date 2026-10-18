@@ -1,8 +1,8 @@
 {
-  "name": "discord-clone-server",
+  "name": "bonfire-server",
   "version": "1.0.0",
   "private": true,
-  "description": "Backend for the Discord clone - Express + WebSockets + Postgres",
+  "description": "Backend for Bonfire - Express + WebSockets + Postgres",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",

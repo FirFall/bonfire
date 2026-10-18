@@ -1,4 +1,4 @@
-# Discord Clone
+# Bonfire 🔥
 
 A Discord-style chat app: servers (guilds), text channels, real-time messaging via WebSockets, presence, typing indicators, and invite codes. Built for one-click deploy on [Render](https://render.com).
 
@@ -19,7 +19,7 @@ A Discord-style chat app: servers (guilds), text channels, real-time messaging v
 
 ## Run locally
 
-1. Postgres running locally, e.g. `docker run -d --name discord-pg -p 5432:5432 -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=discord_clone postgres:16`
+1. Postgres running locally, e.g. `docker run -d --name bonfire-pg -p 5432:5432 -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=bonfire postgres:16`
 2. `cd server && cp .env.example .env && npm install && npm run dev`
 3. `cd client && npm install && npm run dev` — open http://localhost:5173
 
@@ -27,15 +27,9 @@ The schema creates itself on first server start.
 
 ## Deploy to Render
 
-1. Push this `discord-clone` folder to its own GitHub repo:
-   ```
-   cd discord-clone
-   git init && git add . && git commit -m "Discord clone"
-   gh repo create discord-clone --private --source=. --push
-   ```
-   (or create the repo on github.com and push manually)
-2. In the [Render Dashboard](https://dashboard.render.com): **New → Blueprint**, pick the repo.
-3. Render reads `render.yaml`, provisions the web service + Postgres, wires `DATABASE_URL`, and generates a `JWT_SECRET`. Click **Apply**.
+1. The code is already pushed to GitHub at **https://github.com/FirFall/bonfire**
+2. In the [Render Dashboard](https://dashboard.render.com): **New → Blueprint**, connect GitHub and pick the `bonfire` repo.
+3. Render reads `render.yaml`, provisions the web service (`bonfire`) + Postgres (`bonfire-db`), wires `DATABASE_URL`, and generates a `JWT_SECRET`. Click **Apply**.
 4. Once the deploy finishes, open the service URL — you're live.
 
 ### Notes

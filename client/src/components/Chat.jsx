@@ -42,8 +42,8 @@ export default function Chat({ channel, messages, typing, onSend, onTyping }) {
     return (
       <div className="chat">
         <div className="chat-empty">
-          <h2>Welcome to Discord Clone</h2>
-          <p>Select a server on the left, or create one with the + button.</p>
+          <h2>Welcome to Bonfire 🔥</h2>
+          <p>Pull up a seat: select a server on the left, or start a new one with the + button.</p>
         </div>
       </div>
     );

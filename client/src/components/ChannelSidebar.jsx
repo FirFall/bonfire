@@ -3,7 +3,7 @@ import React from "react";
 export default function ChannelSidebar({ guild, channels, activeChannelId, onSelect, onCreate, user, onLogout }) {
   return (
     <div className="channel-sidebar">
-      <div className="guild-header">{guild ? guild.name : "Discord Clone"}</div>
+      <div className="guild-header">{guild ? guild.name : "🔥 Bonfire"}</div>
 
       {guild && (
         <div className="invite-box" title="Share this code so friends can join">
