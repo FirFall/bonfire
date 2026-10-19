@@ -61,34 +61,41 @@ function attach(httpServer) {
     send(ws, { op: "READY", data: { user_id: meta.userId } });
 
     ws.on("message", async (raw) => {
-      let msg;
+      // Never let a data-layer error escape: an unhandled rejection in this
+      // handler would terminate the whole server process.
       try {
-        msg = JSON.parse(raw);
-      } catch {
-        return;
-      }
+        let msg;
+        try {
+          msg = JSON.parse(raw);
+        } catch {
+          return;
+        }
 
-      if (msg.op === "SUBSCRIBE") {
-        const channelId = String(msg.channel_id || "");
-        if ((await isChannelMember(meta.userId, channelId))) {
-          meta.channels.add(channelId);
-        } else {
-          send(ws, { op: "ERROR", data: { message: "Not a member of this channel" } });
+        if (msg.op === "SUBSCRIBE") {
+          const channelId = String(msg.channel_id || "");
+          if ((await isChannelMember(meta.userId, channelId))) {
+            meta.channels.add(channelId);
+          } else {
+            send(ws, { op: "ERROR", data: { message: "Not a member of this channel" } });
+          }
+        } else if (msg.op === "UNSUBSCRIBE") {
+          meta.channels.delete(String(msg.channel_id || ""));
+        } else if (msg.op === "TYPING") {
+          const channelId = String(msg.channel_id || "");
+          const key = `${meta.userId}:${channelId}`;
+          const now = Date.now();
+          if (now - (lastTyping.get(key) || 0) < 3000) return;
+          lastTyping.set(key, now);
+          if (await isChannelMember(meta.userId, channelId)) {
+            broadcastToChannel(channelId, {
+              op: "TYPING_UPDATE",
+              data: { channel_id: channelId, user_id: meta.userId, username: meta.username },
+            });
+          }
         }
-      } else if (msg.op === "UNSUBSCRIBE") {
-        meta.channels.delete(String(msg.channel_id || ""));
-      } else if (msg.op === "TYPING") {
-        const channelId = String(msg.channel_id || "");
-        const key = `${meta.userId}:${channelId}`;
-        const now = Date.now();
-        if (now - (lastTyping.get(key) || 0) < 3000) return;
-        lastTyping.set(key, now);
-        if (await isChannelMember(meta.userId, channelId)) {
-          broadcastToChannel(channelId, {
-            op: "TYPING_UPDATE",
-            data: { channel_id: channelId, user_id: meta.userId, username: meta.username },
-          });
-        }
+      } catch (err) {
+        console.error("websocket message error", err);
+        send(ws, { op: "ERROR", data: { message: "Server error" } });
       }
     });
 

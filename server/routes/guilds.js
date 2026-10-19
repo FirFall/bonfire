@@ -2,12 +2,13 @@ const express = require("express");
 const { rest, insert } = require("../db");
 const { requireAuth } = require("../auth");
 const { nextId, inviteCode } = require("../snowflake");
+const ah = require("../async");
 
 const router = express.Router();
 router.use(requireAuth);
 
 // List guilds the current user belongs to (embeds guild via FK)
-router.get("/", async (req, res) => {
+router.get("/", ah(async (req, res) => {
   const rows = await rest("guild_members", {
     query: {
       user_id: `eq.${req.user.id}`,
@@ -24,12 +25,12 @@ router.get("/", async (req, res) => {
     }));
   guilds.sort((a, b) => String(a.id).localeCompare(String(b.id))); // snowflake ids sort by time
   res.json({ guilds });
-});
+}));
 
 // Create a guild (creator becomes owner, gets a #general channel).
 // PostgREST has no multi-statement transaction, so if a follow-up insert
 // fails we delete the guild (cascades clean up its rows) and report.
-router.post("/", async (req, res) => {
+router.post("/", ah(async (req, res) => {
   const name = (req.body?.name || "").trim();
   if (name.length < 2 || name.length > 100)
     return res.status(400).json({ error: "Server name must be 2-100 characters" });
@@ -51,10 +52,10 @@ router.post("/", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
   res.status(201).json({ guild: { id: guildId, name, invite_code: code, role: "owner" } });
-});
+}));
 
 // Join a guild via invite code
-router.post("/join", async (req, res) => {
+router.post("/join", ah(async (req, res) => {
   const code = (req.body?.invite_code || "").trim();
   if (!code) return res.status(400).json({ error: "Invite code required" });
 
@@ -71,10 +72,10 @@ router.post("/join", async (req, res) => {
     headers: { Prefer: "resolution=ignore-duplicates" },
   });
   res.json({ guild: { id: String(guild.id), name: guild.name, invite_code: code, role: "member" } });
-});
+}));
 
 // Guild detail: channels + members (only for members)
-router.get("/:id", async (req, res) => {
+router.get("/:id", ah(async (req, res) => {
   const guildId = req.params.id;
 
   const membership = await rest("guild_members", {
@@ -113,10 +114,10 @@ router.get("/:id", async (req, res) => {
         joined_at: m.joined_at,
       })),
   });
-});
+}));
 
 // Create a text channel
-router.post("/:id/channels", async (req, res) => {
+router.post("/:id/channels", ah(async (req, res) => {
   const guildId = req.params.id;
   const name = (req.body?.name || "").trim().toLowerCase().replace(/\s+/g, "-");
   if (!/^[a-z0-9._-]{2,50}$/.test(name))
@@ -134,6 +135,6 @@ router.post("/:id/channels", async (req, res) => {
   const id = nextId();
   await insert("channels", { id, guild_id: guildId, name, position });
   res.status(201).json({ channel: { id, name, position } });
-});
+}));
 
 module.exports = router;

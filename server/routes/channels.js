@@ -3,13 +3,14 @@ const { rest, insert, isChannelMember } = require("../db");
 const { requireAuth } = require("../auth");
 const { nextId } = require("../snowflake");
 const { broadcastToChannel } = require("../ws");
+const ah = require("../async");
 
 const router = express.Router();
 router.use(requireAuth);
 
 // Fetch recent messages (newest 50, returned oldest-first for display).
 // Author info comes along via the users FK embed.
-router.get("/:id/messages", async (req, res) => {
+router.get("/:id/messages", ah(async (req, res) => {
   const channelId = req.params.id;
   if (!(await isChannelMember(req.user.id, channelId)))
     return res.status(403).json({ error: "Not a member of this channel's server" });
@@ -34,10 +35,10 @@ router.get("/:id/messages", async (req, res) => {
       avatar_color: m.users?.avatar_color || "#5865f2",
     })),
   });
-});
+}));
 
 // Send a message - persisted, then broadcast over WebSocket to channel subscribers
-router.post("/:id/messages", async (req, res) => {
+router.post("/:id/messages", ah(async (req, res) => {
   const channelId = req.params.id;
   const content = (req.body?.content || "").trim();
   if (!content) return res.status(400).json({ error: "Message cannot be empty" });
@@ -67,6 +68,6 @@ router.post("/:id/messages", async (req, res) => {
   };
   broadcastToChannel(channelId, { op: "MESSAGE_CREATE", data: message });
   res.status(201).json({ message });
-});
+}));
 
 module.exports = router;

@@ -9,7 +9,20 @@ const { onlineUserIds, attach } = require("./ws");
 const app = express();
 app.use(express.json({ limit: "32kb" }));
 
-app.get("/api/health", (req, res) => res.json({ ok: true }));
+// Latest Supabase check result, refreshed in the background so /api/health can
+// report it without a blocking network call. The status code stays 200 either
+// way, so Render's own health check is never the thing that fails.
+let supabase = { ok: null, hint: "check pending" };
+function checkSupabase() {
+  return initCheck().then((report) => {
+    supabase = report;
+    return report;
+  });
+}
+
+app.get("/api/health", (req, res) =>
+  res.json({ ok: true, supabase: supabase.ok === true ? "ok" : supabase.hint || "unknown" })
+);
 
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/guilds", require("./routes/guilds"));
@@ -33,11 +46,17 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Internal server error" });
 });
 
+// Last-resort net: without this, one stray rejected promise would kill the
+// process (Node >= 15) and Render would show 502s.
+process.on("unhandledRejection", (err) => {
+  console.error("Unhandled promise rejection:", err);
+});
+
 const PORT = process.env.PORT || 3001;
 const server = http.createServer(app);
 attach(server);
 
-initCheck()
+checkSupabase()
   .then((report) => {
     if (report.ok) {
       console.log("Supabase connection OK");
@@ -53,3 +72,8 @@ initCheck()
     console.error("Supabase startup check crashed:", err);
     process.exit(1);
   });
+
+// Keep /api/health current, e.g. if the Supabase project gets paused.
+setInterval(() => {
+  checkSupabase().catch(() => {});
+}, 60000).unref();
