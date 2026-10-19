@@ -8,9 +8,12 @@ services:
     healthCheckPath: /api/health
     envVars:
       - key: SUPABASE_URL
-        value: "https://YOUR_PROJECT_REF.supabase.co"
+        value: "https://xmansccwyxtbbhyvnijt.supabase.co"
+      # Not stored in this file: Render asks for the value when the blueprint is
+      # created (or set it later in the service's Environment tab). The repo is
+      # public, and this key grants full read/write access to the database.
       - key: SUPABASE_SECRET_KEY
-        value: "PASTE_YOUR_SB_SECRET_KEY_HERE"
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: NODE_VERSION
