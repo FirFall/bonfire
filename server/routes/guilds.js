@@ -1,56 +1,56 @@
 const express = require("express");
-const { pool } = require("../db");
+const { rest, insert } = require("../db");
 const { requireAuth } = require("../auth");
 const { nextId, inviteCode } = require("../snowflake");
 
 const router = express.Router();
 router.use(requireAuth);
 
-// List guilds the current user belongs to
+// List guilds the current user belongs to (embeds guild via FK)
 router.get("/", async (req, res) => {
-  const { rows } = await pool.query(
-    `SELECT g.id, g.name, g.invite_code, gm.role
-     FROM guilds g
-     JOIN guild_members gm ON gm.guild_id = g.id
-     WHERE gm.user_id = $1
-     ORDER BY g.created_at ASC`,
-    [req.user.id]
-  );
-  res.json({ guilds: rows.map((r) => ({ ...r, id: String(r.id) })) });
+  const rows = await rest("guild_members", {
+    query: {
+      user_id: `eq.${req.user.id}`,
+      select: "role,guilds(id,name,invite_code,created_at)",
+    },
+  });
+  const guilds = rows
+    .filter((r) => r.guilds)
+    .map((r) => ({
+      id: String(r.guilds.id),
+      name: r.guilds.name,
+      invite_code: r.guilds.invite_code,
+      role: r.role,
+    }));
+  guilds.sort((a, b) => String(a.id).localeCompare(String(b.id))); // snowflake ids sort by time
+  res.json({ guilds });
 });
 
-// Create a guild (creator becomes owner, gets a #general channel)
+// Create a guild (creator becomes owner, gets a #general channel).
+// PostgREST has no multi-statement transaction, so if a follow-up insert
+// fails we delete the guild (cascades clean up its rows) and report.
 router.post("/", async (req, res) => {
   const name = (req.body?.name || "").trim();
   if (name.length < 2 || name.length > 100)
     return res.status(400).json({ error: "Server name must be 2-100 characters" });
 
-  const client = await pool.connect();
+  const guildId = nextId();
+  const code = inviteCode();
   try {
-    await client.query("BEGIN");
-    const guildId = nextId();
-    const code = inviteCode();
-    await client.query(
-      "INSERT INTO guilds (id, name, owner_id, invite_code) VALUES ($1, $2, $3, $4)",
-      [guildId, name, req.user.id, code]
-    );
-    await client.query(
-      "INSERT INTO guild_members (guild_id, user_id, role) VALUES ($1, $2, 'owner')",
-      [guildId, req.user.id]
-    );
-    await client.query(
-      "INSERT INTO channels (id, guild_id, name, position) VALUES ($1, $2, 'general', 0)",
-      [nextId(), guildId]
-    );
-    await client.query("COMMIT");
-    res.status(201).json({ guild: { id: guildId, name, invite_code: code, role: "owner" } });
+    await insert("guilds", { id: guildId, name, owner_id: req.user.id, invite_code: code });
   } catch (err) {
-    await client.query("ROLLBACK");
     console.error("create guild error", err);
-    res.status(500).json({ error: "Internal server error" });
-  } finally {
-    client.release();
+    return res.status(500).json({ error: "Internal server error" });
   }
+  try {
+    await insert("guild_members", { guild_id: guildId, user_id: req.user.id, role: "owner" });
+    await insert("channels", { id: nextId(), guild_id: guildId, name: "general", position: 0 });
+  } catch (err) {
+    console.error("create guild error (rolling back)", err);
+    await rest("guilds", { method: "DELETE", query: { id: `eq.${guildId}` } }).catch(() => {});
+    return res.status(500).json({ error: "Internal server error" });
+  }
+  res.status(201).json({ guild: { id: guildId, name, invite_code: code, role: "owner" } });
 });
 
 // Join a guild via invite code
@@ -58,15 +58,18 @@ router.post("/join", async (req, res) => {
   const code = (req.body?.invite_code || "").trim();
   if (!code) return res.status(400).json({ error: "Invite code required" });
 
-  const { rows } = await pool.query("SELECT id, name FROM guilds WHERE invite_code = $1", [code]);
+  const rows = await rest("guilds", {
+    query: { invite_code: `eq.${code}`, select: "id,name" },
+  });
   const guild = rows[0];
   if (!guild) return res.status(404).json({ error: "Invalid invite code" });
 
-  await pool.query(
-    `INSERT INTO guild_members (guild_id, user_id) VALUES ($1, $2)
-     ON CONFLICT (guild_id, user_id) DO NOTHING`,
-    [guild.id, req.user.id]
-  );
+  // ignore-duplicates == ON CONFLICT DO NOTHING (PK is guild_id+user_id)
+  await rest("guild_members", {
+    method: "POST",
+    body: { guild_id: guild.id, user_id: req.user.id },
+    headers: { Prefer: "resolution=ignore-duplicates" },
+  });
   res.json({ guild: { id: String(guild.id), name: guild.name, invite_code: code, role: "member" } });
 });
 
@@ -74,33 +77,41 @@ router.post("/join", async (req, res) => {
 router.get("/:id", async (req, res) => {
   const guildId = req.params.id;
 
-  const membership = await pool.query(
-    "SELECT role FROM guild_members WHERE guild_id = $1 AND user_id = $2",
-    [guildId, req.user.id]
-  );
-  if (!membership.rows[0]) return res.status(403).json({ error: "Not a member of this server" });
+  const membership = await rest("guild_members", {
+    query: { guild_id: `eq.${guildId}`, user_id: `eq.${req.user.id}`, select: "role" },
+  });
+  if (!membership[0]) return res.status(403).json({ error: "Not a member of this server" });
 
-  const guild = await pool.query("SELECT id, name, invite_code FROM guilds WHERE id = $1", [guildId]);
-  if (!guild.rows[0]) return res.status(404).json({ error: "Server not found" });
+  const guilds = await rest("guilds", {
+    query: { id: `eq.${guildId}`, select: "id,name,invite_code" },
+  });
+  if (!guilds[0]) return res.status(404).json({ error: "Server not found" });
 
-  const [channels, members] = await Promise.all([
-    pool.query(
-      "SELECT id, name, position FROM channels WHERE guild_id = $1 ORDER BY position, name",
-      [guildId]
-    ),
-    pool.query(
-      `SELECT u.id, u.username, u.avatar_color, gm.role, gm.joined_at
-       FROM guild_members gm JOIN users u ON u.id = gm.user_id
-       WHERE gm.guild_id = $1
-       ORDER BY gm.joined_at ASC`,
-      [guildId]
-    ),
+  const [channels, memberRows] = await Promise.all([
+    rest("channels", {
+      query: { guild_id: `eq.${guildId}`, select: "id,name,position", order: "position.asc,name.asc" },
+    }),
+    rest("guild_members", {
+      query: {
+        guild_id: `eq.${guildId}`,
+        select: "role,joined_at,users(id,username,avatar_color)",
+        order: "joined_at.asc",
+      },
+    }),
   ]);
 
   res.json({
-    guild: { ...guild.rows[0], id: String(guild.rows[0].id), role: membership.rows[0].role },
-    channels: channels.rows.map((c) => ({ ...c, id: String(c.id) })),
-    members: members.rows.map((m) => ({ ...m, id: String(m.id) })),
+    guild: { ...guilds[0], id: String(guilds[0].id), role: membership[0].role },
+    channels: channels.map((c) => ({ ...c, id: String(c.id) })),
+    members: memberRows
+      .filter((m) => m.users)
+      .map((m) => ({
+        id: String(m.users.id),
+        username: m.users.username,
+        avatar_color: m.users.avatar_color,
+        role: m.role,
+        joined_at: m.joined_at,
+      })),
   });
 });
 
@@ -111,22 +122,18 @@ router.post("/:id/channels", async (req, res) => {
   if (!/^[a-z0-9._-]{2,50}$/.test(name))
     return res.status(400).json({ error: "Channel name must be 2-50 chars (a-z, 0-9, . _ -)" });
 
-  const membership = await pool.query(
-    "SELECT role FROM guild_members WHERE guild_id = $1 AND user_id = $2",
-    [guildId, req.user.id]
-  );
-  if (!membership.rows[0]) return res.status(403).json({ error: "Not a member of this server" });
+  const membership = await rest("guild_members", {
+    query: { guild_id: `eq.${guildId}`, user_id: `eq.${req.user.id}`, select: "role" },
+  });
+  if (!membership[0]) return res.status(403).json({ error: "Not a member of this server" });
 
-  const pos = await pool.query(
-    "SELECT COALESCE(MAX(position), -1) + 1 AS next FROM channels WHERE guild_id = $1",
-    [guildId]
-  );
+  const top = await rest("channels", {
+    query: { guild_id: `eq.${guildId}`, select: "position", order: "position.desc", limit: "1" },
+  });
+  const position = (top[0]?.position ?? -1) + 1;
   const id = nextId();
-  await pool.query(
-    "INSERT INTO channels (id, guild_id, name, position) VALUES ($1, $2, $3, $4)",
-    [id, guildId, name, pos.rows[0].next]
-  );
-  res.status(201).json({ channel: { id, name, position: pos.rows[0].next } });
+  await insert("channels", { id, guild_id: guildId, name, position });
+  res.status(201).json({ channel: { id, name, position } });
 });
 
 module.exports = router;

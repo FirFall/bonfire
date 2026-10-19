@@ -1,5 +1,5 @@
 const { WebSocketServer } = require("ws");
-const { pool } = require("./db");
+const { isChannelMember } = require("./db");
 const { verifyToken } = require("./auth");
 
 // Connected clients: ws -> { userId, username, avatarColor, channels:Set }
@@ -26,16 +26,6 @@ function broadcastToChannel(channelId, obj) {
 
 function setPresence(userId, status) {
   broadcast({ op: "PRESENCE_UPDATE", data: { user_id: userId, status } });
-}
-
-async function isMemberOfChannel(userId, channelId) {
-  const { rows } = await pool.query(
-    `SELECT 1 FROM guild_members gm
-     JOIN channels c ON c.guild_id = gm.guild_id
-     WHERE c.id = $1 AND gm.user_id = $2`,
-    [channelId, userId]
-  );
-  return rows.length > 0;
 }
 
 // Simple typing throttle: a user may emit TYPING per channel at most every 3s
@@ -80,7 +70,7 @@ function attach(httpServer) {
 
       if (msg.op === "SUBSCRIBE") {
         const channelId = String(msg.channel_id || "");
-        if ((await isMemberOfChannel(meta.userId, channelId))) {
+        if ((await isChannelMember(meta.userId, channelId))) {
           meta.channels.add(channelId);
         } else {
           send(ws, { op: "ERROR", data: { message: "Not a member of this channel" } });
@@ -93,7 +83,7 @@ function attach(httpServer) {
         const now = Date.now();
         if (now - (lastTyping.get(key) || 0) < 3000) return;
         lastTyping.set(key, now);
-        if (await isMemberOfChannel(meta.userId, channelId)) {
+        if (await isChannelMember(meta.userId, channelId)) {
           broadcastToChannel(channelId, {
             op: "TYPING_UPDATE",
             data: { channel_id: channelId, user_id: meta.userId, username: meta.username },

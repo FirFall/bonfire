@@ -3,7 +3,7 @@ require("./env").load();
 const path = require("path");
 const http = require("http");
 const express = require("express");
-const { initSchema } = require("./db");
+const { initCheck } = require("./db");
 const { onlineUserIds, attach } = require("./ws");
 
 const app = express();
@@ -37,13 +37,19 @@ const PORT = process.env.PORT || 3001;
 const server = http.createServer(app);
 attach(server);
 
-initSchema()
-  .then(() => {
+initCheck()
+  .then((report) => {
+    if (report.ok) {
+      console.log("Supabase connection OK");
+    } else {
+      console.warn("WARNING: " + report.hint);
+      console.warn("The server will keep running, but API calls will fail until this is fixed.");
+    }
     server.listen(PORT, () => {
       console.log(`Bonfire server listening on :${PORT}`);
     });
   })
   .catch((err) => {
-    console.error("Failed to initialize database schema:", err);
+    console.error("Supabase startup check crashed:", err);
     process.exit(1);
   });

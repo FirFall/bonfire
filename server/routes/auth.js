@@ -1,6 +1,6 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
-const { pool } = require("../db");
+const { rest, insert } = require("../db");
 const { signToken, requireAuth } = require("../auth");
 const { nextId } = require("../snowflake");
 
@@ -17,6 +17,11 @@ function publicUser(row) {
   return { id: String(row.id), username: row.username, avatar_color: row.avatar_color };
 }
 
+// Map PostgREST's unique-violation to the same error the SQL layer gave.
+function isDuplicate(err) {
+  return err.status === 409 || err.code === "23505";
+}
+
 router.post("/register", async (req, res) => {
   try {
     const { username, email, password } = req.body || {};
@@ -27,22 +32,33 @@ router.post("/register", async (req, res) => {
     if (!password || password.length < 8)
       return res.status(400).json({ error: "Password must be at least 8 characters" });
 
-    const existing = await pool.query(
-      "SELECT 1 FROM users WHERE username = $1 OR email = $2",
-      [username.toLowerCase(), email.toLowerCase()]
-    );
-    if (existing.rowCount)
+    const u = username.toLowerCase();
+    const e = email.toLowerCase();
+    const [byName, byEmail] = await Promise.all([
+      rest("users", { query: { username: `eq.${u}`, select: "id" } }),
+      rest("users", { query: { email: `eq.${e}`, select: "id" } }),
+    ]);
+    if (byName.length || byEmail.length)
       return res.status(409).json({ error: "Username or email already taken" });
 
     const id = nextId();
     const hash = await bcrypt.hash(password, 10);
     const color = AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
-    const { rows } = await pool.query(
-      `INSERT INTO users (id, username, email, password_hash, avatar_color)
-       VALUES ($1, $2, $3, $4, $5) RETURNING id, username, avatar_color`,
-      [id, username.toLowerCase(), email.toLowerCase(), hash, color]
-    );
-    const user = publicUser(rows[0]);
+    let row;
+    try {
+      row = await insert("users", {
+        id,
+        username: u,
+        email: e,
+        password_hash: hash,
+        avatar_color: color,
+      });
+    } catch (err) {
+      if (isDuplicate(err))
+        return res.status(409).json({ error: "Username or email already taken" });
+      throw err;
+    }
+    const user = publicUser(row);
     res.status(201).json({ token: signToken(user), user });
   } catch (err) {
     console.error("register error", err);
@@ -56,10 +72,9 @@ router.post("/login", async (req, res) => {
     if (!username || !password)
       return res.status(400).json({ error: "Username and password required" });
 
-    const { rows } = await pool.query(
-      "SELECT * FROM users WHERE username = $1 OR email = $1",
-      [username.toLowerCase()]
-    );
+    const needle = username.toLowerCase();
+    let rows = await rest("users", { query: { username: `eq.${needle}` } });
+    if (!rows.length) rows = await rest("users", { query: { email: `eq.${needle}` } });
     const row = rows[0];
     if (!row || !(await bcrypt.compare(password, row.password_hash)))
       return res.status(401).json({ error: "Invalid credentials" });
@@ -73,10 +88,9 @@ router.post("/login", async (req, res) => {
 });
 
 router.get("/me", requireAuth, async (req, res) => {
-  const { rows } = await pool.query(
-    "SELECT id, username, avatar_color FROM users WHERE id = $1",
-    [req.user.id]
-  );
+  const rows = await rest("users", {
+    query: { id: `eq.${req.user.id}`, select: "id,username,avatar_color" },
+  });
   if (!rows[0]) return res.status(404).json({ error: "User not found" });
   res.json({ user: publicUser(rows[0]) });
 });

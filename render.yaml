@@ -7,11 +7,12 @@ services:
     startCommand: cd server && npm start
     healthCheckPath: /api/health
     envVars:
-      - key: DATABASE_URL
-        value: "PASTE_YOUR_SUPABASE_CONNECTION_STRING_HERE"
+      - key: SUPABASE_URL
+        value: "https://YOUR_PROJECT_REF.supabase.co"
+      - key: SUPABASE_SECRET_KEY
+        value: "PASTE_YOUR_SB_SECRET_KEY_HERE"
       - key: JWT_SECRET
         generateValue: true
       - key: NODE_VERSION
         value: "20"
-    # databases section removed - using external Postgres from Wispbyte
 
