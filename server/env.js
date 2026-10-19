@@ -1,14 +1,17 @@
 // Tiny zero-dependency .env loader for local development.
 // Searches (first hit per key wins):
-//   1. .env.local  (written by `neon deploy`)
-//   2. .env
-//   3. server/.env.local
-//   4. server/.env
+//   1. ~/.config/bonfire/.env  (secrets kept outside the repo and OneDrive)
+//   2. .env.local  (written by `neon deploy`)
+//   3. .env
+//   4. server/.env.local
+//   5. server/.env
 // On Render, environment variables are injected directly, so this is a no-op.
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 
 const CANDIDATES = [
+  path.join(os.homedir(), ".config", "bonfire", ".env"),
   path.join(__dirname, "..", ".env.local"),
   path.join(__dirname, "..", ".env"),
   path.join(__dirname, ".env.local"),

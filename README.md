@@ -41,7 +41,7 @@ A Discord-style chat app: servers (guilds), text channels, real-time messaging v
 - **Instance plan**: the web service is on Render's **Free** plan ($0). The catch: free web services spin down after ~15 minutes with no traffic, which drops live chat connections. Bonfire handles this gracefully — the client auto-reconnects (brief gap, then it's back). If you ever want always-on chat, bump the web service to Starter ($7/mo) in its settings.
 - **Database**: [Supabase](https://supabase.com) free tier (500 MB). The backend talks to Supabase's HTTPS API with the secret key — no direct database connection, so it works from any network. You run `server/schema.sql` once in the SQL Editor (there's no auto-create on boot, since SQL can't run over the REST API).
 - **Free Supabase projects pause after ~7 days of inactivity** — while paused, logins stop working until you open the dashboard and click **Restore**. Using the app counts as activity, so an active app stays unpaused.
-- **API keys**: the `sb_secret_...` key is server-side only (Render env, never in the client or the repo).
+- **API keys**: the `sb_secret_...` key is server-side only. On Render it lives in the service's Environment tab (`sync: false` in `render.yaml`, so it is never written to this repo). For local dev it is read from `~/.config/bonfire/.env` — outside the repo and outside OneDrive — so it cannot be committed or cloud-synced by accident.
 
 ## Architecture
 
